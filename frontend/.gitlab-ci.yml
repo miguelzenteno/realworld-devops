@@ -1,0 +1,87 @@
+variables:
+  ENV: dev
+
+before_script:
+  - cd frontend/
+  - wget --no-verbose -O mint https://mint-lang.s3-eu-west-1.amazonaws.com/mint-master-linux
+  - chmod +x ./mint
+  - mv ./mint /usr/local/bin/mint
+
+stages:
+  - test
+  - build
+  - deploy
+
+lint:
+ image: alpine:latest
+ stage: test
+ script:
+   - mint lint
+ tags:
+   - general
+
+test:
+  image: markhobson/node-chrome:latest
+  stage: test
+  script:
+    - mint test
+  tags:
+    - general
+
+build_package:
+  image: madhead/imagemagick:latest
+  stage: build
+  script:
+    - apk add --no-cache python3 py3-pip jq
+    - pip3 install --upgrade pip
+    - pip3 install --no-cache-dir awscli
+    - rm -rf /var/cache/apk/*
+    - ./api_url.sh
+    - mint build
+  cache:
+    - key: package
+      paths:
+        - frontend/dist
+      policy: push
+  tags:
+    - general
+
+plan_tf:
+  image:
+    name: hashicorp/terraform:light
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  stage: deploy
+  before_script:
+  - cd frontend/
+  script:
+    - cd deploy
+    - rm -rf .terraform*
+    - terraform init --backend-config=backend-$ENV.conf
+    - terraform plan
+  tags:
+    - general
+
+apply_tf:
+  image:
+    name: zenika/terraform-aws-cli
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  stage: deploy
+  needs: ["plan_tf"]
+  before_script:
+  - cd frontend/
+  script:
+    - cd deploy
+    - rm -rf .terraform*
+    - terraform init --backend-config=backend-$ENV.conf
+    - terraform apply -auto-approve
+  cache:
+    - key: package
+      paths:
+        - frontend/dist
+      policy: pull
+  tags:
+    - general

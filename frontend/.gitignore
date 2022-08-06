@@ -1,2 +1,5 @@
 .mint
 dist
+
+#IaC
+deploy/.terraform*
