@@ -9,3 +9,6 @@ dist
 coverage
 gh-pages
 .dynamodb
+
+#IaC
+security/.terraform*

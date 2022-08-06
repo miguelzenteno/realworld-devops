@@ -1,0 +1,103 @@
+  variables:
+    ENV: dev
+
+  before_script:
+    - cd backend/
+
+  stages:
+    - dependencies
+    - test
+    - build
+    - deploy
+
+  node_modules:
+    image: node:14-slim
+    stage: dependencies
+    script:
+      - npm install
+      - npm run postinstall
+    cache:
+      key: node_modules
+      paths:
+        - backend/node_modules
+        - backend/.dynamodb
+      policy: push
+    tags:
+      - general
+
+  lint&test:
+    image: node:14-slim
+    stage: test
+    needs: [ "node_modules" ]
+    script:
+      - npm run test
+    cache:
+      key: node_modules
+      paths:
+        - backend/node_modules
+        - backend/.dynamodb
+      policy: pull
+    tags:
+      - general
+
+  build:
+    image: node:14-slim
+    stage: build
+    script:
+      - npm run deploy
+    cache:
+      key: node_modules
+      paths:
+        - backend/node_modules
+      policy: pull
+    tags:
+      - general
+
+  test_deploy:
+    image: node:14-slim
+    stage: build
+    needs: ["build"]
+    script:
+      - apt update -y && apt-get install curl unzip groff jq -y
+      - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && ./aws/install
+      - rm -rf aws*
+      - ./api_info.sh
+      - npm run test:deployed
+    cache:
+    - key: node_modules
+      paths:
+        - backend/node_modules
+      policy: pull
+    tags:
+      - general
+
+  plan_tf:
+    image:
+      name: hashicorp/terraform:light
+      entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    stage: deploy
+    script:
+      - cd security
+      - rm -rf .terraform*
+      - terraform init --backend-config=backend-$ENV.conf
+      - terraform plan
+    tags:
+      - general
+
+  apply_tf:
+    image:
+      name: hashicorp/terraform:light
+      entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    stage: deploy
+    needs: ["plan_tf"]
+    script:
+      - cd security
+      - rm -rf .terraform*
+      - terraform init --backend-config=backend-$ENV.conf
+      - terraform apply -auto-approve
+    tags:
+      - general
