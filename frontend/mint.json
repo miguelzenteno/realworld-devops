@@ -1,0 +1,35 @@
+{
+  "name": "mint-realworld",
+  "mint-version": "0.16.0 <= v < 1.0.0",
+  "source-directories": [
+    "source"
+  ],
+  "test-directories": [
+    "tests"
+  ],
+  "external": {
+    "javascripts": [
+      "assets/commonmark.js"
+    ]
+  },
+  "application": {
+    "name": "Conduit",
+    "title": "Conduit",
+    "orientation": "portrait",
+    "display": "standalone",
+    "theme-color": "#00a0e8",
+    "icon": "assets/icon.png",
+    "head": "assets/head.html",
+    "meta": {
+      "charset": "utf-8",
+      "description": "A place to share your knowledge.",
+      "keywords": [
+        "mint",
+        "mint-lang",
+        "conduit",
+        "realworld.io"
+      ],
+      "viewport": "width=device-width, initial-scale=1, shrink-to-fit=no"
+    }
+  }
+}

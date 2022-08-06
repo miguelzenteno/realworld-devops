@@ -1,0 +1,65 @@
+variables:
+  PHASE: BUILD
+
+before_script:
+  - cd infrastructure/
+
+stages:
+  - plan
+  - deploy
+
+Plan-TF:
+  image:
+    name: hashicorp/terraform:light
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  stage: plan
+  script:
+    - rm -rf .terraform*
+    - terraform init
+    - terraform plan
+  only:
+    variables:
+      - $PHASE == "BUILD"
+  tags:
+    - general
+
+Apply-TF:
+  image:
+    name: hashicorp/terraform:light
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  stage: deploy
+  script:
+    - rm -rf .terraform*
+    - terraform init
+    - terraform apply --auto-approve
+  needs: ["Plan-TF"]
+  only:
+    variables:
+      - $PHASE == "BUILD"
+  tags:
+    - general
+
+Destroy-TF:
+  image:
+    name: hashicorp/terraform:light
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  stage: deploy
+  script:
+    - rm -rf .terraform*
+    - terraform init
+    - terraform destroy -auto-approve
+  needs: ["Plan-TF"]
+  only:
+    variables:
+      - $PHASE == "DESTROY"
+  environment:
+    name: dev
+    action: stop
+  tags:
+    - general
