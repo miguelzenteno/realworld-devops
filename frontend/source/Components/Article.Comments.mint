@@ -1,0 +1,32 @@
+component Article.Comments {
+  connect Stores.Comments exposing { status }
+
+  get content : Html {
+    if (Array.isEmpty(comments)) {
+      <div>"This article does not have any comments yet."</div>
+    } else {
+      <div>
+        for (comment of comments) {
+          <Article.Comment comment={comment}/>
+        }
+      </div>
+    }
+  } where {
+    comments =
+      case (status) {
+        Api.Status::Ok(comments) => comments
+        => []
+      }
+  }
+
+  fun render : Html {
+    <Status
+      message="There was an error loading the comments."
+      loadingMessage="Loading comments..."
+      status={Api.toStatus(status)}>
+
+      <{ content }>
+
+    </Status>
+  }
+}
